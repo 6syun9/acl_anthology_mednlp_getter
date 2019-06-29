@@ -1,4 +1,6 @@
 import bs4
+import pyperclip
+import sys
 import urllib
 import pyperclip
 
@@ -25,6 +27,7 @@ def mednlp(conference_and_year, verbose=True, ashtml=False):
 	# get html content
 	url = 'https://aclweb.org/anthology/events/{}-{}'.format(conference.lower(), str(year))
 
+	print('Connecting...')
 	try:
 		with urllib.request.urlopen(url) as res:
 			mednlp_parse(res, verbose, ashtml)
@@ -43,9 +46,13 @@ def mednlp_parse(res, verbose=True, ashtml=False):
 
 	result = []
 	prev_title = ''
+	n_total = 0
+	n_match = 0
 
 	# extract articles
+	sys.stdout.write('\n')
 	for tag in soup.select('a[class="align-middle"]'):
+		n_total += 1
 		skip = False
 		title = tag.getText()
 		if title != prev_title:
@@ -56,15 +63,23 @@ def mednlp_parse(res, verbose=True, ashtml=False):
 							link = tag.attrs['href']
 							if link.startswith('/anthology/paper'):
 								result.append([title, 'https://aclweb.org'+link])
+								n_match += 1
 								skip = True
 								prev_title = title
 								break
+		sys.stdout.write('\rSearching... {} match / {}'.format(n_match, n_total))
+		sys.stdout.flush()	
+	sys.stdout.write('\n')
 
+	# result
 	if len(result) == 0:								
 		print('No medical NLP papers found.')								
 								
 	if verbose:
 		print('\n\n'.join(['\n'.join(r) for r in result]))
+	
+	if toclipboard:
+		pyperclip.copy('\n\n'.join(['\n'.join(r) for r in result]))
 
 	if not ashtml:
 		return result
